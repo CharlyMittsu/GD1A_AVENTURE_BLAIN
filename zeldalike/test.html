@@ -7,28 +7,14 @@
     </head>
     <body>
         <script type="text/javascript">
-            var config = {
-            type: Phaser.AUTO,
-            width: 1000, height: 800,
-            pixelArt: true,
-            
-            physics: {
-                default: 'arcade',
-                arcade: {
-                
-                debug: true
-            }},
+            class sceneExemple extends Phaser.Scene{
+                constructor(){
+                super("sceneExemple");
+                }
 
-
-            scene: {preload: preload, create: create, update: update }
-            };
             
-            new Phaser.Game(config);
-            function preload(){
-            this.load.image('sky', 'assets/sky.png');
-            this.load.image('ground', 'assets/platform.png');
-            
-            
+            preload(){
+           
 
             this.load.image("Phaser_tuilesdejeu", "assets/tuilesJeu.png");
             this.load.tilemapTiledJSON("carte", "map.json");  
@@ -37,46 +23,16 @@
             { frameWidth: 24, frameHeight: 27 });
             this.load.spritesheet('bullet','assets/fireShot.png',
             { frameWidth: 32, frameHeight: 32 });
+            this.load.spritesheet('bullet','assets/monstre.png',
+            { frameWidth: 30 , frameHeight: 30 });
+
+
             }
 
-            var platforms;
-            var block;
-            var player;
-            var facing = 0;
-
-            var speed = 200;//vitesse de déplacement
-            var tpSpeed = speed*4//vitesse du tp 
-            var tpLenght = 18000 //distance de tp
-            var frame = 20;
-
-            var dash = 0;
-
-            /*
-            var bullets;
-            var lastFired = 0;
-            var isDown = false;
-            */
-            
-            
-            var gameOver;
-            gameOver = false;
-
-            function create(){
+            create(){
                 //_______________________________________
                 //_____________TERRAIN___________________
                 //_______________________________________
-                
-                /*
-                this.add.image(400, 300, 'sky');
-
-                platforms = this.physics.add.staticGroup();
-                platforms.create(400, 568, 'ground').setScale(2).refreshBody();
-                platforms.create(600, 400, 'ground');
-                platforms.create(50, 260, 'ground');
-                platforms.create(750, 230, 'ground');
-                */
-                
-
                 
 
                 const carteDuNiveau = this.add.tilemap("carte");
@@ -111,21 +67,29 @@
                 //_____________OBJET_____________________
                 //_______________________________________
 
-                var Bullet = new Phaser.Class({
-                    Extends: Phaser.GameObjects.Image
+                this.facing = 0;
+                this.frame = 20;//vitesse animation 
 
-                });
                 
-                player = this.physics.add.sprite(100, 200, 'perso').setSize(15 ,10).setOffset(5, 17)   ;
+                this.speed = 200;//vitesse de déplacement
+                this.tpSpeed = this.speed*4//vitesse du tp 
+                this.tpLenght = 18000 //distance de tp
+
+                this.dash = 0;
+                this.maxCharge = 6;//nombre max d'utilisation du dash
+                this.charge = this.maxCharge; 
+                
+                this.player = this.physics.add.sprite(800, 500, 'perso').setSize(15 ,10).setOffset(5, 17);
+                
                 // reglage de la hitbox du perso
 
-                player.setCollideWorldBounds(true);
-                this.physics.add.collider(player, platforms);
+                this.player.setCollideWorldBounds(true);
                 
-                this.physics.add.collider(player, block);
+                
+                this.physics.add.collider(this.player, block);
                 this.physics.world.setBounds(0, 0, 1000, 1000);
                 this.cameras.main.setBounds(0, 0, 1000, 1000);
-                this.cameras.main.startFollow(player);
+                this.cameras.main.startFollow(this.player);
                 this.cameras.main.zoom=2;
 
                 
@@ -136,7 +100,7 @@
                 this.anims.create({
                 key: 'left',
                 frames: this.anims.generateFrameNumbers('perso', {start:30,end:39}),
-                frameRate: frame,
+                frameRate: this.frame,
                 repeat: -1
                 });
                 this.anims.create({
@@ -154,7 +118,7 @@
                 this.anims.create({
                 key: 'down',
                 frames: this.anims.generateFrameNumbers('perso', {start:10,end:19}),
-                frameRate: frame,
+                frameRate: this.frame,
                 repeat: -1
                 });
                 this.anims.create({
@@ -172,7 +136,7 @@
                 this.anims.create({
                 key: 'up',
                 frames: this.anims.generateFrameNumbers('perso', {start:50,end:59}),
-                frameRate: frame,
+                frameRate: this.frame,
                 repeat: -1
                 });
                 this.anims.create({
@@ -190,7 +154,7 @@
                 this.anims.create({
                 key: 'right',
                 frames: this.anims.generateFrameNumbers('perso', {start:70,end:79}),
-                frameRate: frame,
+                frameRate: this.frame,
                 repeat: -1
                 });
                 this.anims.create({
@@ -206,15 +170,12 @@
                 
                 });
 
-
-
-                cursors = this.input.keyboard.createCursorKeys();
+                this.cursors = this.input.keyboard.createCursorKeys();
 
                 //_______________________________________
                 //_______________________________________
 
-                debug=this.add.text(300,160,'Facing: 0',{fontSize:'32px',fill:'#000'});
-                //Phaser.Display.Align.In.TopLeft(debug,cameras);
+                this.debug=this.add.text(260,200,'Dash: 0',{fontSize:'28px',fill:'#000'}).setScrollFactor(0);
                 //affiche un texte à l’écran, pour le score
 
                 
@@ -222,109 +183,127 @@
 
 
             }
-            function update(){
-                if (gameOver){return;}
-                debug.setText('Facing: ' + facing); //met à jour l’affichage du texte
+            update(){
+                
+                this.debug.setText('Dash: ' + this.charge); //met à jour l’affichage du texte
 
                 //_______________________________________
                 //_____________DASH_______________
                 //_______________________________________
 
-                if ((this.input.keyboard.checkDown(cursors.space,tpLenght)==true)&&(dash==0)){dash=tpLenght};
-                if (dash>0){
-                    dash = dash -tpSpeed
-                    if (facing==0){
-                        player.setVelocityY(tpSpeed);
-                        player.setVelocityX(0);
-                        player.anims.play('tp down', true);
+                if ((this.input.keyboard.checkDown(this.cursors.space,this.tpLenght)==true)&&(this.dash==0)&&(this.charge>0)){this.dash=this.tpLenght,this.charge-=1};
+                if (this.dash>0){
+                    this.dash -= this.tpSpeed
+                    if (this.facing==0){
+                        this.player.setVelocityY(this.tpSpeed);
+                        this.player.setVelocityX(0);
+                        this.player.anims.play('tp down', true);
                     }
-                    else if (facing == 1){
-                        player.setVelocityX(-tpSpeed);
-                        player.setVelocityY(0);
-                        player.anims.play('tp left', true);
+                    else if (this.facing == 1){
+                        this.player.setVelocityX(-this.tpSpeed);
+                        this.player.setVelocityY(0);
+                        this.player.anims.play('tp left', true);
                     }
-                    else if (facing == 2){
-                        player.setVelocityY(-tpSpeed);
-                        player.setVelocityX(0);
-                        player.anims.play('tp up', true);
+                    else if (this.facing == 2){
+                        this.player.setVelocityY(-this.tpSpeed);
+                        this.player.setVelocityX(0);
+                        this.player.anims.play('tp up', true);
                     }
-                    else if (facing == 3){
-                        player.setVelocityX(tpSpeed);
-                        player.setVelocityY(0);
-                        player.anims.play('tp right', true);
+                    else if (this.facing == 3){
+                        this.player.setVelocityX(this.tpSpeed);
+                        this.player.setVelocityY(0);
+                        this.player.anims.play('tp right', true);
                     }
                 };
-                if (dash<0){dash = 0};
+                if (this.dash<0){this.dash = 0};
                 
                 //_______________________________________
                 //_____________DEPLACEMENT_______________
                 //_______________________________________
-                if(dash==0){
+                if(this.dash==0){
 
-                    if (cursors.left.isDown){ //si la touche gauche est appuyée
-                        facing = 1;
-                        if (player.body.velocity.y!=0){
-                            player.setVelocityX(-speed/1.5);
+                    if (this.cursors.left.isDown){ //si la touche gauche est appuyée
+                        this.facing = 1;
+                        if (this.player.body.velocity.y!=0){
+                            this.player.setVelocityX(-this.speed/1.5);
                         }
                         else {
-                            player.setVelocityX(-speed);
+                            this.player.setVelocityX(-this.speed);
                             
                         
                         } //alors vitesse négative en X
-                        if((!cursors.up.isDown)&&(!cursors.down.isDown)){player.anims.play('left', true);} //et animation => gauche
+                        if((!this.cursors.up.isDown)&&(!this.cursors.down.isDown)){this.player.anims.play('left', true);} //et animation => gauche
                         
 
                         }
                     
-                    else if (cursors.right.isDown){ //sinon si la touche droite est appuyée
-                        facing = 3;
-                        if (player.body.velocity.y!=0){
-                            player.setVelocityX(speed/1.5);
+                    else if (this.cursors.right.isDown){ //sinon si la touche droite est appuyée
+                        this.facing = 3;
+                        if (this.player.body.velocity.y!=0){
+                            this.player.setVelocityX(this.speed/1.5);
                         }
                         else {
-                            player.setVelocityX(speed);//alors vitesse positive en X
+                            this.player.setVelocityX(this.speed);//alors vitesse positive en X
                             
                         } 
-                        if((!cursors.up.isDown)&&(!cursors.down.isDown)){player.anims.play('right', true);} //et animation => droite
+                        if((!this.cursors.up.isDown)&&(!this.cursors.down.isDown)){this.player.anims.play('right', true);} //et animation => droite
                         
                     }
 
                     else{ // sinon
-                    player.setVelocityX(0); //vitesse nulle
+                        this.player.setVelocityX(0); //vitesse nulle
                     }
 
-                    if (cursors.up.isDown){//si touche haut appuyée 
-                        facing = 2;
-                        if (player.body.velocity.x!=0){
-                            player.setVelocityY(-speed/1.5);
+                    if (this.cursors.up.isDown){//si touche haut appuyée 
+                        this.facing = 2;
+                        if (this.player.body.velocity.x!=0){
+                            this.player.setVelocityY(-this.speed/1.5);
                         }
-                        else {player.setVelocityY(-speed);}
+                        else {this.player.setVelocityY(-this.speed);}
                         //alors vitesse verticale négative
-                        player.anims.play('up', true);//animation haut
+                        this.player.anims.play('up', true);//animation haut
                     }
-                    else if (cursors.down.isDown){ //sinon si la touche bas est appuyée
-                        facing = 0;
-                        if (player.body.velocity.x!=0){
-                            player.setVelocityY(speed/1.5);
+                    else if (this.cursors.down.isDown){ //sinon si la touche bas est appuyée
+                        this.facing = 0;
+                        if (this.player.body.velocity.x!=0){
+                            this.player.setVelocityY(this.speed/1.5);
                         }
-                        else {player.setVelocityY(speed);}
+                        else {this.player.setVelocityY(this.speed);}
                         //alors vitesse verticale positive
-                        player.anims.play('down', true); //animation bas
+                        this.player.anims.play('down', true); //animation bas
                     
                     }
                     else{ // sinon
-                    player.setVelocityY(0); //vitesse nulle
+                        this.player.setVelocityY(0); //vitesse nulle
                     }
-                    if ((player.body.velocity.x==0)&&(player.body.velocity.y==0)){
-                        if(facing == 0){player.anims.play('turn down',true);}
-                        else if (facing == 1){player.anims.play('turn left',true);}
-                        else if (facing == 2){player.anims.play('turn up',true);}
-                        else if (facing == 3){player.anims.play('turn right',true);}
+                    if ((this.player.body.velocity.x==0)&&(this.player.body.velocity.y==0)){
+                        if(this.facing == 0){this.player.anims.play('turn down',true);}
+                        else if (this.facing == 1){this.player.anims.play('turn left',true);}
+                        else if (this.facing == 2){this.player.anims.play('turn up',true);}
+                        else if (this.facing == 3){this.player.anims.play('turn right',true);}
                     }
 
                 }
                 
             }
+        }
+            var config = {
+            type: Phaser.AUTO,
+            width: 1000, height: 800,
+            pixelArt: true,
+            
+            physics: {
+                default: 'arcade',
+                arcade: {
+                
+                debug: true
+            }},
+
+
+            scene:[sceneExemple]
+            };
+            
+            new Phaser.Game(config);
             
 
 
