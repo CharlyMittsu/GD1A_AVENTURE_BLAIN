@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
     <head>
-        <meta charset="UTF-8" /><title>Mon 1er jeu Phaser</title>
+        <meta charset="UTF-8" /><title>Candle</title>
         <script src="//cdn.jsdelivr.net/npm/phaser@3.20.0/dist/phaser.js"></script>
         <style type="text/css"> body { margin: 0; }</style>
     </head>
@@ -21,17 +21,25 @@
             
             this.load.spritesheet('perso','assets/perso2.png',
             { frameWidth: 24, frameHeight: 27 });
-            this.load.spritesheet('bullet','assets/fireShot.png',
+            this.load.spritesheet('bullet','assets/fireShot1.png',
             { frameWidth: 32, frameHeight: 32 });
-            this.load.spritesheet('bullet','assets/monstre.png',
+            this.load.spritesheet('monstre','assets/monstre.png',
             { frameWidth: 30 , frameHeight: 30 });
+            this.load.spritesheet('energie','assets/energie.png',
+            { frameWidth: 32 , frameHeight: 32 });
+            this.load.spritesheet('energi3','assets/energi3.png',
+            { frameWidth: 32, frameHeight: 32 });
+            this.load.spritesheet('bush','assets/bush.png',
+            { frameWidth: 32 , frameHeight: 32 });
+            this.load.spritesheet('energieBar','assets/energieBar.png',
+            { frameWidth: 256 , frameHeight: 64 });
 
 
             }
 
             create(){
                 //_______________________________________
-                //_____________TERRAIN___________________
+                //_____________LOAD TERRAIN______________
                 //_______________________________________
                 
 
@@ -42,61 +50,138 @@
                 "Phaser_tuilesdejeu"
                 );  
 
-                const block = carteDuNiveau.createStaticLayer(
-                "block",
-                tileset
-                );
+                //_______________________________________
+                //_________TUILES SOUS LE JOUEUR_________
+                //_______________________________________
 
                 const sol = carteDuNiveau.createStaticLayer(
                 "sol",
                 tileset
                 );
 
+                const block = carteDuNiveau.createStaticLayer(//tuiles Solides
+                "block",
+                tileset
+                );
+                
+
                 const deco = carteDuNiveau.createStaticLayer(
                 "deco",
                 tileset
                 );
 
+                //_______________________________________
+                //__________CREATION OBJET_______________
+                //_______________________________________
+
+                this.energies = this.physics.add.group({
+                    key: 'energie',
+                    immovable: true,
+
+                });
+                this.energi3s = this.physics.add.group({
+                    key: 'energi3',
+                    immovable: true,
+
+                });
+                this.bullets = this.physics.add.group({
+                    key: 'bullet',
+                    
+
+                });
+                this.bushs = this.physics.add.group({
+                    key: 'bush',
+                    immovable: true,
+
+                });
                 
+                this.physics.add.collider( this.bullets,block, this.collideBullet, null, this);
+
+                carteDuNiveau.getObjectLayer('energieCalque').objects.forEach((energie)=>{
+                    const energieSprite = this.energies.create(energie.x,energie.y-energie.height,'energie').setOrigin(0);
+                });
+                carteDuNiveau.getObjectLayer('energi3Calque').objects.forEach((energi3)=>{
+                    const energi3Sprite = this.energi3s.create(energi3.x,energi3.y-energi3.height,'energi3').setOrigin(0);
+                });
+                carteDuNiveau.getObjectLayer('bushCalque').objects.forEach((bush)=>{
+                    const bushSprite = this.bushs.create(bush.x,bush.y-bush.height,'bush').setOrigin(0);
+                });
+
+                //_______________________________________
+                //_______________JOUEUR__________________
+                //_______________________________________
+
+                this.player = this.physics.add.sprite(700, 500, 'perso').setSize(15 ,10).setOffset(5, 17);// reglage de la hitbox du perso
+                //affichage du perso entre ces calques
+
+                //_______________________________________
+                //_________TUILES SUR LE JOUEUR__________
+                //_______________________________________
+
+                const deco2 = carteDuNiveau.createStaticLayer(
+                "deco2",
+                tileset
+                );
 
                 
                 block.setCollisionByProperty({ estSolide: true }); 
 
 
                 //_______________________________________
-                //_____________OBJET_____________________
+                //______________VARIABLES________________
                 //_______________________________________
+
 
                 this.facing = 0;
                 this.frame = 20;//vitesse animation 
 
                 
-                this.speed = 200;//vitesse de déplacement
+                this.speed0 = 200;//vitesse de déplacement de base
+                this.speed=this.speed0
+
                 this.tpSpeed = this.speed*4//vitesse du tp 
-                this.tpLenght = 18000 //distance de tp
+                this.tpLenght = 15000 //distance de tp
 
                 this.dash = 0;
                 this.maxCharge = 6;//nombre max d'utilisation du dash
                 this.charge = this.maxCharge; 
-                
-                this.player = this.physics.add.sprite(800, 500, 'perso').setSize(15 ,10).setOffset(5, 17);
-                
-                // reglage de la hitbox du perso
+                this.buffEnergie = false;
 
-                this.player.setCollideWorldBounds(true);
+                this.bulletSpeed = this.speed+this.speed0
+                this.bulletSpread = 20; //disperion du tir
+
+                this.keyE = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
                 
                 
-                this.physics.add.collider(this.player, block);
-                this.physics.world.setBounds(0, 0, 1000, 1000);
-                this.cameras.main.setBounds(0, 0, 1000, 1000);
+                
+                //_______________________________________
+                //______________PHYSIQUE_________________
+                //_______________________________________
+
+                
+
+                this.player.setCollideWorldBounds(true);// le perso ne peu sortir des limites du terrain
+                
+                
+                this.physics.add.collider(this.player, block);//le perso est block par les tuiles block(estSolide)
+                this.physics.world.setBounds(0, 0, 2048, 2048);
+                this.cameras.main.setBounds(0, 0, 2048, 2048);
                 this.cameras.main.startFollow(this.player);
                 this.cameras.main.zoom=2;
+
+                
+                
+                this.physics.add.overlap(this.player, this.energies, this.hitEnergie, null, this);
+                this.physics.add.overlap(this.player, this.energi3s, this.hitEnergi3, null, this);
+                this.physics.add.overlap(this.bullets, this.bushs, this.burnBush, null, this);
+                this.physics.add.overlap(this.player, this.bushs, this.burnBush, null, this);
 
                 
                 //_______________________________________
                 //_____________ANIMATION_________________
                 //_______________________________________
 
+                //animation perso
                 this.anims.create({
                 key: 'left',
                 frames: this.anims.generateFrameNumbers('perso', {start:30,end:39}),
@@ -170,12 +255,109 @@
                 
                 });
 
+
+                //animation objet 
+                this.anims.create({
+                key: 'idleBullet',
+                frames: this.anims.generateFrameNumbers('bullet', {start:0,end:7}),
+                frameRate: 20,
+                repeat: -1
+                });
+                this.anims.create({
+                key: 'burningBush',
+                frames: this.anims.generateFrameNumbers('bush', {start:1,end:4}),
+                frameRate: 20,
+                repeat: -1
+                });
+                //animation ui
+                this.anims.create({
+                key: 'E0/6',
+                frames: [ { key: 'energieBar', frame: 0 } ],
+                });
+                this.anims.create({
+                key: 'E1/6',
+                frames: [ { key: 'energieBar', frame: 1 } ],
+                });
+                this.anims.create({
+                key: 'E2/6',
+                frames: [ { key: 'energieBar', frame: 2 } ],
+                });
+                this.anims.create({
+                key: 'E3/6',
+                frames: [ { key: 'energieBar', frame: 3 } ],
+                });
+                this.anims.create({
+                key: 'E4/6',
+                frames: [ { key: 'energieBar', frame: 4 } ],
+                });
+                this.anims.create({
+                key: 'E5/6',
+                frames: [ { key: 'energieBar', frame: 5 } ],
+                });
+                this.anims.create({
+                key: 'E6/6',
+                frames: [ { key: 'energieBar', frame: 6 } ],
+                });
+                this.anims.create({
+                key: 'E0/12',
+                frames: [ { key: 'energieBar', frame: 7 } ],
+                });
+                this.anims.create({
+                key: 'E1/12',
+                frames: [ { key: 'energieBar', frame: 8 } ],
+                });
+                this.anims.create({
+                key: 'E2/12',
+                frames: [ { key: 'energieBar', frame: 9 } ],
+                });
+                this.anims.create({
+                key: 'E3/12',
+                frames: [ { key: 'energieBar', frame: 10 } ],
+                });
+                this.anims.create({
+                key: 'E4/12',
+                frames: [ { key: 'energieBar', frame: 11 } ],
+                });
+                this.anims.create({
+                key: 'E5/12',
+                frames: [ { key: 'energieBar', frame: 12 } ],
+                });
+                this.anims.create({
+                key: 'E6/12',
+                frames: [ { key: 'energieBar', frame: 13 } ],
+                });
+                this.anims.create({
+                key: 'E7/12',
+                frames: [ { key: 'energieBar', frame: 14 } ],
+                });
+                this.anims.create({
+                key: 'E8/12',
+                frames: [ { key: 'energieBar', frame: 15 } ],
+                });
+                this.anims.create({
+                key: 'E9/12',
+                frames: [ { key: 'energieBar', frame: 16 } ],
+                });
+                this.anims.create({
+                key: 'E10/12',
+                frames: [ { key: 'energieBar', frame: 17 } ],
+                });
+                this.anims.create({
+                key: 'E11/12',
+                frames: [ { key: 'energieBar', frame: 18 } ],
+                });
+                this.anims.create({
+                key: 'E12/12',
+                frames: [ { key: 'energieBar', frame: 19 } ],
+                });
+
                 this.cursors = this.input.keyboard.createCursorKeys();
 
                 //_______________________________________
                 //_______________________________________
 
-                this.debug=this.add.text(260,200,'Dash: 0',{fontSize:'28px',fill:'#000'}).setScrollFactor(0);
+                
+                this.dashBar=this.add.sprite(400,240,'energieBar').setScrollFactor(0);
                 //affiche un texte à l’écran, pour le score
 
                 
@@ -183,15 +365,22 @@
 
 
             }
+            //_______________________________________
+            //________________UPDATE_________________
+            //_______________________________________
             update(){
-                
-                this.debug.setText('Dash: ' + this.charge); //met à jour l’affichage du texte
 
+                this.updateSpeed();
+                if (this.buffEnergie == false){this.maxCharge = 6 }else{12};
+                
+                
+                this.updateEnergieBar(this.charge);
+                
                 //_______________________________________
                 //_____________DASH_______________
                 //_______________________________________
 
-                if ((this.input.keyboard.checkDown(this.cursors.space,this.tpLenght)==true)&&(this.dash==0)&&(this.charge>0)){this.dash=this.tpLenght,this.charge-=1};
+                if ((this.input.keyboard.checkDown(this.cursors.space,this.tpLenght)==true)&&(this.dash==0)&&(this.charge>0)){this.dash=this.tpLenght,this.setCharge(-1)};
                 if (this.dash>0){
                     this.dash -= this.tpSpeed
                     if (this.facing==0){
@@ -216,7 +405,12 @@
                     }
                 };
                 if (this.dash<0){this.dash = 0};
-                
+
+
+
+                if (this.input.keyboard.checkDown(this.keyE,200)==true){this.createBullet(this.player.x,this.player.y)};
+                //this.input.keyboard.checkDown(this.cursors.space,500)==true)
+                //this.keyE.isDown
                 //_______________________________________
                 //_____________DEPLACEMENT_______________
                 //_______________________________________
@@ -286,6 +480,113 @@
                 }
                 
             }
+
+
+            
+            //_______________________________________
+            //____________FIN UPDATE_________________
+            //_______________________________________
+
+            //_______________________________________
+            //____________FONCTIONS__________________
+            //_______________________________________
+
+            updateSpeed(){//fonction pour mettre à jour la vitesse du perso
+                this.speed = (this.speed0+0)
+            }
+            updateEnergieBar(value){
+                
+                if (this.buffEnergie == false){
+                    if (value==0){this.dashBar.anims.play('E0/6',true);}
+                    if (value==1){this.dashBar.anims.play('E1/6',true);}
+                    if (value==2){this.dashBar.anims.play('E2/6',true);}
+                    if (value==3){this.dashBar.anims.play('E3/6',true);}
+                    if (value==4){this.dashBar.anims.play('E4/6',true);}
+                    if (value==5){this.dashBar.anims.play('E5/6',true);}
+                    if (value==6){this.dashBar.anims.play('E6/6',true);}
+                }else{
+                    if (value==0){this.dashBar.anims.play('E0/12',true);}
+                    if (value==1){this.dashBar.anims.play('E1/12',true);}
+                    if (value==2){this.dashBar.anims.play('E2/12',true);}
+                    if (value==3){this.dashBar.anims.play('E3/12',true);}
+                    if (value==4){this.dashBar.anims.play('E4/12',true);}
+                    if (value==5){this.dashBar.anims.play('E5/12',true);}
+                    if (value==6){this.dashBar.anims.play('E6/12',true);}
+                    if (value==7){this.dashBar.anims.play('E7/12',true);}
+                    if (value==8){this.dashBar.anims.play('E8/12',true);}
+                    if (value==9){this.dashBar.anims.play('E9/12',true);}
+                    if (value==10){this.dashBar.anims.play('E10/12',true);}
+                    if (value==11){this.dashBar.anims.play('E11/12',true);}
+                    if (value==12){this.dashBar.anims.play('E12/12',true);}
+                }
+
+            }
+            
+            setCharge(value){
+                this.charge += value;
+                if (this.charge>this.maxCharge){this.charge=this.maxCharge}
+                if (this.charge<0){this.charge=0}
+            }
+            
+            hitEnergie(player,energie){
+                energie.destroy();//l'energie disparait
+                this.setCharge(1);//+1 charge
+
+                
+            }
+            hitEnergi3(player,energi3){
+                energi3.destroy();//l'energi3 disparait
+                this.setCharge(3);//+3 charge
+
+            }
+            destroybush(bush){
+                bush.destroy()
+                //this.energies.create(bush.x,bush.y,'energie').setOrigin(0);
+                //
+            }
+            burnBush(bullet, bush){
+                bush.anims.play('burningBush',true)
+                setTimeout(function(){
+                    bush.destroy()
+                    
+                    if (Phaser.Math.Between(0,100)<2){this.energies.create(bush.x, bush.y, 'energie').setOrigin(0);}
+                    
+
+                }.bind(this), 2000);//bind(this) permet d' identifier this.energies
+            }
+            
+            
+            
+            createBullet(playerX,playerY){
+                this.bullet = this.bullets.create(playerX,playerY,'bullet');
+                
+                if (this.facing==0){
+                    this.bullet.setVelocity(Phaser.Math.Between(-this.bulletSpread, this.bulletSpread),this.bulletSpeed);
+                    this.bullet.anims.play('idleBullet',true)
+                }
+                else if (this.facing == 1){
+                    this.bullet.setVelocity(-this.bulletSpeed,Phaser.Math.Between(-this.bulletSpread, this.bulletSpread));
+                    this.bullet.anims.play('idleBullet',true)
+                }
+                else if (this.facing == 2){
+                    this.bullet.setVelocity(Phaser.Math.Between(-this.bulletSpread, this.bulletSpread),-this.bulletSpeed);
+                    this.bullet.anims.play('idleBullet',true)
+                }
+                else if (this.facing == 3){
+                    this.bullet.setVelocity(this.bulletSpeed,Phaser.Math.Between(-this.bulletSpread, this.bulletSpread));
+                    this.bullet.anims.play('idleBullet',true)
+                }
+                
+            }
+            collideBullet(bullet){
+                bullet.destroy();
+            }
+                
+
+            
+            //_______________________________________
+            //__________FIN FONCTIONS________________
+            //_______________________________________
         }
             var config = {
             type: Phaser.AUTO,
@@ -296,7 +597,7 @@
                 default: 'arcade',
                 arcade: {
                 
-                debug: true
+                debug: false
             }},
 
 
