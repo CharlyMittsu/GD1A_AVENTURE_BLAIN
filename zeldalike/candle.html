@@ -20,7 +20,7 @@
             this.load.tilemapTiledJSON("carte", "map.json");  
             
             this.load.spritesheet('perso','assets/perso2.png',
-            { frameWidth: 24, frameHeight: 27 });
+            { frameWidth: 24, frameHeight: 30 });
             this.load.spritesheet('bullet','assets/fireShot1.png',
             { frameWidth: 32, frameHeight: 32 });
             this.load.spritesheet('arbreMonstre','assets/monstre.png',
@@ -44,6 +44,8 @@
             { frameWidth: 32 , frameHeight: 32 });
             this.load.spritesheet('flambeau','assets/flambeau.png',
             { frameWidth: 32 , frameHeight: 32 });
+            this.load.spritesheet('beacon','assets/beacon.png',
+            { frameWidth: 16 , frameHeight: 32 });
             this.load.spritesheet('number','assets/number.png',
             { frameWidth: 16 , frameHeight: 8 });
             this.load.spritesheet('bougie','assets/bougie.png',
@@ -163,6 +165,12 @@
                     immovable: true,
                     
                 });
+                this.beacons = this.physics.add.group({
+                    key: 'beacon',
+                    immovable: true,
+                    
+                });
+                
                 this.numbers = this.physics.add.group({
                     key: 'number',
 
@@ -205,6 +213,9 @@
                 });
                 carteDuNiveau.getObjectLayer('flambeauCalque').objects.forEach((flambeau)=>{
                     const rocherSprite = this.flambeauOffs.create(flambeau.x,flambeau.y-flambeau.height,'flambeau').setOrigin(0);
+                })
+                carteDuNiveau.getObjectLayer('beaconCalque').objects.forEach((beacon)=>{
+                    const rocherSprite = this.beacons.create(beacon.x+16,beacon.y-32,'beacon').setOrigin(0).setSize(8 ,10).setOffset(4, 22);
                 })
                 
 
@@ -281,6 +292,7 @@
                 this.physics.add.collider(this.player, this.locks, this.unlock, null, this);//par les portes
                 this.physics.add.collider(this.player, this.arbres);
                 this.physics.add.collider( this.player,this.flambeauOffs, this.lightFlambeau, null, this);
+                this.physics.add.collider(this.player, this.beacons);
                 this.physics.add.collider( this.player,this.flambeauOns,this.hitFlambeau, null, this);
                 this.physics.add.collider( this.player,this.blockEyes,this.collideBlockEye,null,this);
                 
@@ -289,6 +301,7 @@
                 this.physics.add.collider( this.bullets,this.locks, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.blockEyes, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.arbres, this.collideBullet, null, this);
+                this.physics.add.collider( this.bullets,this.beacons, this.collideBullet,this.tpPlayer, null, this);
 
                 this.physics.add.collider( this.arbreMonstres,block);
                 this.physics.add.collider( this.arbreMonstres,this.rochers);
@@ -296,12 +309,14 @@
                 this.physics.add.collider( this.arbreMonstres,this.arbreMonstres);
                 this.physics.add.collider( this.arbreMonstres,this.flambeauOns);
                 this.physics.add.collider( this.arbreMonstres,this.flambeauOffs);
+                this.physics.add.collider( this.arbreMonstres,this.beacons);
                 this.physics.add.collider( this.arbreMonstres,this.blockEyes,this.collideBlockEye,null,this);
                 this.physics.add.collider( this.arbreMonstres,trou);//ne peut pas passer au dessus des trou
                 this.physics.add.collider(this.arbreMonstres, this.arbres);
                 
                 this.physics.add.collider(this.blockEyes, this.arbres);
                 this.physics.add.collider( this.blockEyes,this.rochers);
+                this.physics.add.collider( this.blockEyes,this.beacons);
                 this.physics.add.collider( this.blockEyes,block);//ne peut pas passer sur les murs
                 this.physics.add.collider( this.blockEyes,trou);//ne peut pas passer au dessus des trou
                 
@@ -684,6 +699,17 @@
                     }
                     else if(rocher.body.y<=Y) {
                         rocher.setDepth(0)
+                        //console.log("false")
+                    }
+                });
+                this.beacons.children.iterate(function (beacon) {
+                    var Y =beacon.scene.player.body.y
+                    if (beacon.body.y>Y){
+                        beacon.setDepth(2)
+                        //console.log("true")
+                    }
+                    else if(beacon.body.y<=Y) {
+                        beacon.setDepth(0)
                         //console.log("false")
                     }
                 });
@@ -1126,9 +1152,14 @@
                 }
                 
             }
+            tpPlayer(bullet,beacon){
+                bullet.scene.player.body.x=bullet.body.x+10;
+                bullet.scene.player.body.y=bullet.body.y+19;
+            }
             collideBullet(bullet){
                 bullet.destroy();
             }
+            
             lightFlambeau(player, flambeau){
                 console.log("flambeau allumé ");
                 flambeau.destroy();//detruit le monstre
@@ -1173,7 +1204,7 @@
                 default: 'arcade',
                 arcade: {
                 
-                debug: false
+                debug: true
             }},
 
 
