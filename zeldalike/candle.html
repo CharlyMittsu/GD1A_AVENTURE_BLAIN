@@ -56,7 +56,10 @@
             { frameWidth: 1 , frameHeight: 1 });
             this.load.image('keys','assets/key.png',
             { frameWidth: 16 , frameHeight: 16 });
-
+            this.load.spritesheet('pillar','assets/pillars.png',
+            { frameWidth: 16 , frameHeight: 32 });
+            this.load.spritesheet('gate','assets/gate.png',
+            { frameWidth: 64, frameHeight: 64 });
 
             }
 
@@ -170,6 +173,11 @@
                     immovable: true,
                     
                 });
+                this.pillars= this.physics.add.group({
+                    key: 'pillar',
+                    immovable: true,
+                    
+                });
                 
                 this.numbers = this.physics.add.group({
                     key: 'number',
@@ -217,14 +225,20 @@
                 carteDuNiveau.getObjectLayer('beaconCalque').objects.forEach((beacon)=>{
                     const rocherSprite = this.beacons.create(beacon.x+16,beacon.y-32,'beacon').setOrigin(0).setSize(8 ,10).setOffset(4, 22);
                 })
+                carteDuNiveau.getObjectLayer('pillarCalque').objects.forEach((pillar)=>{
+                    const rocherSprite = this.pillars.create(pillar.x,pillar.y-32,'pillar').setOrigin(0).setSize(8 ,10).setOffset(4, 22);
+                })
                 
 
                 //_______________________________________
                 //_______________JOUEUR__________________
                 //_______________________________________
 
-                this.player = this.physics.add.sprite(1148, 1600, 'perso').setSize(15 ,10).setOffset(5, 17).setDepth(1);// reglage de la hitbox du perso
+                this.player = this.physics.add.sprite(1148, 1600, 'perso').setSize(15 ,10).setOffset(5, 20).setDepth(1);// reglage de la hitbox du perso
                 //affichage du perso entre ces calques
+
+                this.gate=this.physics.add.sprite(2526,1922,'gate').setSize(64 ,14).setOffset(0, 50).setDepth(1);
+                this.gate.setImmovable(true);
 
                 //_______________________________________
                 //_________TUILES SUR LE JOUEUR__________
@@ -249,7 +263,7 @@
                 this.frame = 20;//vitesse animation 
                 this.cinematic=false;
                 this.mobsKilled=false;
-                this.keyGet=true;
+                this.keyGet=false;
                 this.porteOuverte = false;
 
                 
@@ -257,7 +271,7 @@
                 this.speed=this.speed0
 
                 this.tpSpeed = this.speed*4//vitesse du tp 
-                this.tpLenght = 15000 //distance de tp
+                this.tpLenght = 16000 //distance de tp
 
                 this.maxPv = 3;
                 this.pv = 1;
@@ -293,15 +307,20 @@
                 this.physics.add.collider(this.player, this.arbres);
                 this.physics.add.collider( this.player,this.flambeauOffs, this.lightFlambeau, null, this);
                 this.physics.add.collider(this.player, this.beacons);
+                this.physics.add.collider(this.player, this.pillars);
+                this.physics.add.collider(this.player, this.gate,this.end,null,this);
+
                 this.physics.add.collider( this.player,this.flambeauOns,this.hitFlambeau, null, this);
                 this.physics.add.collider( this.player,this.blockEyes,this.collideBlockEye,null,this);
                 
                 this.physics.add.collider( this.bullets,block, this.collideBullet, null, this);//collision du fireshot avec les murs etc
                 this.physics.add.collider( this.bullets,this.rochers, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.locks, this.collideBullet, null, this);
+                this.physics.add.collider( this.bullets,this.gate, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.blockEyes, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.arbres, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.beacons, this.collideBullet,this.tpPlayer, null, this);
+                this.physics.add.collider( this.bullets,this.pillars, this.collideBullet, null, this);
 
                 this.physics.add.collider( this.arbreMonstres,block);
                 this.physics.add.collider( this.arbreMonstres,this.rochers);
@@ -366,7 +385,7 @@
                 this.anims.create({
                 key: 'tp left',
                 frames: this.anims.generateFrameNumbers('perso', {start:24,end:27}),
-                frameRate: 20,
+                frameRate: 30,
                 
                 });
                 this.anims.create({
@@ -384,7 +403,7 @@
                 this.anims.create({
                 key: 'tp down',
                 frames: this.anims.generateFrameNumbers('perso', {start:4,end:7}),
-                frameRate: 20,
+                frameRate: 30,
                 
                 });
                 this.anims.create({
@@ -402,7 +421,7 @@
                 this.anims.create({
                 key: 'tp up',
                 frames: this.anims.generateFrameNumbers('perso', {start:44,end:47}),
-                frameRate: 20,
+                frameRate: 30,
                 
                 });
                 this.anims.create({
@@ -420,7 +439,7 @@
                 this.anims.create({
                 key: 'tp right',
                 frames: this.anims.generateFrameNumbers('perso', {start:64,end:67}),
-                frameRate: 20,
+                frameRate: 30,
                 
                 });
 
@@ -450,6 +469,38 @@
                 frameRate: 8,
                 repeat: -1
                 });
+                this.anims.create({
+                key: 'turnOff',
+                frames: [ { key: 'flambeau', frame: 0 } ],
+                
+                });
+                this.anims.create({
+                key: 'turnOn',
+                frames: this.anims.generateFrameNumbers('flambeau', {start:1,end:4}),
+                frameRate: 10,
+                repeat: -1
+                });
+                this.anims.create({
+                key: 'pillarOff',
+                frames: [ { key: 'pillar', frame: 0 } ],
+                frameRate: 10,
+                repeat: -1
+                
+                });
+                this.anims.create({
+                key: 'pillarOn',
+                frames: [ { key: 'pillar', frame: 1 } ],
+                frameRate: 10,
+                repeat: -1
+                
+                });
+                this.anims.create({
+                key: 'gateOn',
+                frames: [ { key: 'gate', frame: 1 } ],
+                frameRate: 10,
+                repeat: -1
+                
+                });
 
                 //animation monstre______________________________
                 this.anims.create({
@@ -477,18 +528,7 @@
                 repeat: -1
                 });
 
-                this.anims.create({
-                key: 'turnOff',
-                frames: [ { key: 'flambeau', frame: 0 } ],
-                frameRate: 10,
-                repeat: -1
-                });
-                this.anims.create({
-                key: 'turnOn',
-                frames: this.anims.generateFrameNumbers('flambeau', {start:1,end:4}),
-                frameRate: 10,
-                repeat: -1
-                });
+                
 
                 this.anims.create({
                 key: 'eyeClose',
@@ -642,6 +682,8 @@
                 this.anims.create({ key: '17',frames: [ { key: 'number', frame: 17 } ],});
                 this.anims.create({ key: '18',frames: [ { key: 'number', frame: 18 } ],});
                 this.anims.create({ key: '19',frames: [ { key: 'number', frame: 19} ],});
+
+                
                
                 
                 
@@ -686,11 +728,14 @@
 
                 this.monstresRestant= -1;
                 this.flambeausRestant = -1;
+                this.pillarRestant = -1;
 
                 //_______________________________________
                 //___________PROFONDEUR_________________
                 //_______________________________________
 
+                if(this.gate.body.y>this.player.body.y){this.gate.setDepth(2);}else{this.gate.setDepth(0);}
+                
                 this.rochers.children.iterate(function (rocher) {
                     var Y =rocher.scene.player.body.y
                     if (rocher.body.y>Y){
@@ -710,6 +755,17 @@
                     }
                     else if(beacon.body.y<=Y) {
                         beacon.setDepth(0)
+                        //console.log("false")
+                    }
+                });
+                this.pillars.children.iterate(function (pillar) {
+                    var Y =pillar.scene.player.body.y
+                    if (pillar.body.y>Y){
+                        pillar.setDepth(2)
+                        //console.log("true")
+                    }
+                    else if(pillar.body.y<=Y) {
+                        pillar.setDepth(0)
                         //console.log("false")
                     }
                 });
@@ -738,6 +794,7 @@
                 this.flambeauOffs.children.iterate(function (flambeau) {
                     this.flambeausRestant += 1;
                 },this);//,this pour utiliser les this.physics dans une fonction
+                if(this.flambeausRestant==0){this.gate.anims.play('gateOn',true);}
                 
 
                 //_______________________________________
@@ -748,6 +805,18 @@
 
                     this.monstresRestant+=1;
                 },this);
+                
+                this.pillars.children.iterate(function (pillar) {
+
+                    //if(pillar.body.x<0 && pillar.body.y<0){pillar.destroy() }
+                    
+                    this.pillarRestant +=1
+                    
+                    if (this.pillarRestant>this.flambeausRestant){pillar.anims.play('pillarOn',true) }
+                    else(pillar.anims.play('pillarOff',true))
+                },this);
+                //console.log(this.pillarRestant)
+                
 
                 if(this.monstresRestant==0&&this.mobsKilled==false){
                     this.mobsKilled=true;
@@ -831,7 +900,7 @@
                         energie.anims.play('idleEnergie',true);
                         var dist =Phaser.Math.Distance.Between(energie.scene.player.body.x,energie.scene.player.body.y,energie.body.x,energie.body.y)
                         if (dist<500){
-                            this.physics.moveToObject(energie, energie.scene.player, 500/(dist/20));
+                            this.physics.moveToObject(energie, energie.scene.player, 500/(dist/30));
                             
                             
                         }
@@ -1067,19 +1136,23 @@
             
             burnBush(bullet, bush){
                 bush.anims.play('burningBush',true)
+                
+                
                 setTimeout(function(){
-                    bush.destroy()
                     var alea=Phaser.Math.Between(0,150);
-                    console.log("burn");
-                    
                     if (alea<2&&this.dashOn==true){
                         this.energies.create(bush.x, bush.y, 'energie').setOrigin(0);console.log("success");
-                        
                     
-                    }
+                    }else{console.log("fail")}
+                }.bind(this), 500);
+                
+                setTimeout(function(){
+                    bush.destroy()
+                    
+                    console.log("buisson detruit");
                     
 
-                }.bind(this), 1500);//bind(this) permet d' identifier this.energies
+                }.bind(this), 2000);//bind(this) permet d' identifier this.energies
             }
             burnArbreMonstre(player, monstre){
                 console.log("monstre tué");
@@ -1093,7 +1166,7 @@
                     monstre.destroy()
                     console.log("cadavre detruit");
                     
-                    if (Phaser.Math.Between(0,100)<50){this.energi3s.create(monstre.x, monstre.y, 'energi3').setOrigin(0);}
+                    //if (Phaser.Math.Between(0,100)<50){this.energi3s.create(monstre.x, monstre.y, 'energi3').setOrigin(0);}
                     
 
                 }.bind(this), 2000);
@@ -1168,6 +1241,16 @@
                 this.createNumber(flambeau,this.flambeausRestant)
                 
             }
+            end(player, gate){
+                if(this.flambeausRestant==0){
+                    console.log("fin du jeu ");
+                    
+                }
+                console.log(this.flambeausRestant)
+                
+                
+                
+            }
             
             collideBlockEye(player,blockEye){
                 if ((player.body.y-5<blockEye.body.y)&&(player.body.y-5>blockEye.body.y-15) ){player.body.y-=32}
@@ -1204,7 +1287,7 @@
                 default: 'arcade',
                 arcade: {
                 
-                debug: true
+                debug: false
             }},
 
 
