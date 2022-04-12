@@ -2,7 +2,7 @@
 Le but du jeu est d'allumer tout les flambeaux de la carte et de passer le portail
 
 Vous êtes une bougie qui brule les buissons et autres ennemis en bois au contact
-les pouvoir se débloquent à different endroit le carte
+les pouvoir se débloquent à different endroit de le carte
 
 Dash : Barre espace
 permet de parcourir une courte distance très rapidement et de détruire des éléments fragiles
