@@ -60,6 +60,13 @@
             { frameWidth: 16 , frameHeight: 32 });
             this.load.spritesheet('gate','assets/gate.png',
             { frameWidth: 64, frameHeight: 64 });
+            this.load.image('uiE','assets/uiE.png',
+            { frameWidth: 32, frameHeight: 32 });
+            this.load.image('uiSpace','assets/uiSpace.png',
+            { frameWidth: 32, frameHeight: 32 });
+            this.load.spritesheet('powerUp','assets/powerUp.png',
+            { frameWidth: 32, frameHeight: 48 });
+
 
             }
 
@@ -191,6 +198,43 @@
                     key: 'keys',
                     
                 });
+                this.powerUpDash= this.physics.add.group({
+                    key: 'powerUpDash',
+                    
+                });
+                this.powerUpShot= this.physics.add.group({
+                    key: 'powerUpShot',
+                    
+                });
+                this.powerUpCharge= this.physics.add.group({
+                    key: 'powerUpCharge',
+                    
+                });
+
+                
+                //animation de base_________________
+                this.anims.create({
+                key: 'turnPowerUpDash',
+                frames: this.anims.generateFrameNumbers('powerUp', {start:0,end:7}),
+                frameRate: 15,
+                repeat: -1
+                });
+                this.anims.create({
+                key: 'turnPowerUpShot',
+                frames: this.anims.generateFrameNumbers('powerUp', {start:8,end:15}),
+                frameRate: 15,
+                repeat: -1
+                });
+                this.anims.create({
+                key: 'turnPowerUpCharge',
+                frames: this.anims.generateFrameNumbers('powerUp', {start:16,end:23}),
+                frameRate: 15,
+                repeat: -1
+                });
+                
+                
+                //création objet avec tiled__________
+                //___________________________________
                 
                 
 
@@ -228,6 +272,20 @@
                 carteDuNiveau.getObjectLayer('pillarCalque').objects.forEach((pillar)=>{
                     const rocherSprite = this.pillars.create(pillar.x,pillar.y-32,'pillar').setOrigin(0).setSize(8 ,10).setOffset(4, 22);
                 })
+                carteDuNiveau.getObjectLayer('powerUpDash').objects.forEach(
+                    (powerUpDash)=>{const powerUpDashSprite = this.powerUpDash.create(powerUpDash.x,powerUpDash.y-48,'powerUp').setOrigin(0).setSize(0 ,36).setOffset(0, 5);
+                    powerUpDashSprite.anims.play('turnPowerUpDash',true)},
+                );
+                carteDuNiveau.getObjectLayer('powerUpShot').objects.forEach(
+                    (powerUpShot)=>{const powerUpShotSprite = this.powerUpShot.create(powerUpShot.x,powerUpShot.y-48,'powerUp').setOrigin(0).setSize(0 ,36).setOffset(0, 5);
+                    powerUpShotSprite.anims.play('turnPowerUpShot',true)},
+                );
+                carteDuNiveau.getObjectLayer('powerUpCharge').objects.forEach(
+                    (powerUpCharge)=>{const powerUpChargeSprite = this.powerUpCharge.create(powerUpCharge.x,powerUpCharge.y-48,'powerUp').setOrigin(0).setSize(0 ,36).setOffset(0, 5);
+                    powerUpChargeSprite.anims.play('turnPowerUpCharge',true)}
+                );
+                
+                
                 
 
                 //_______________________________________
@@ -277,12 +335,12 @@
                 this.pv = 1;
                 this.dash = 0;//dash inactif si 0
                 this.maxCharge = 6;//nombre max d'utilisation du dash
-                this.charge = this.maxCharge; 
-                this.dashOn=true;//si le dash est débloqué
-                this.fireOn=true;//si le tir est débloqué
+                this.charge = 0; 
+                this.dashOn=false;//si le dash est débloqué
+                this.fireOn=false;//si le tir est débloqué
                 this.maxChargeFire = 10;
                 this.chargeFire = this.maxChargeFire;
-                this.buffEnergie = true;// si on a le bonus pour 12 charge de dash
+                this.buffEnergie = false;// si on a le bonus pour 12 charge de dash
 
                 this.bulletSpeed = this.speed+this.speed0
                 this.bulletSpread = 20; //disperion du tir
@@ -355,11 +413,16 @@
                 
                 this.physics.add.overlap(this.player, this.energies, this.hitEnergie, null, this);
                 this.physics.add.overlap(this.player, this.energi3s, this.hitEnergi3, null, this);
+                this.physics.add.overlap(this.player, this.powerUpDash, this.getDash, null, this);
+                this.physics.add.overlap(this.player, this.powerUpShot, this.getShot, null, this);
+                this.physics.add.overlap(this.player, this.powerUpCharge, this.getBuffEnergie, null, this);
+
                 this.physics.add.overlap(this.bullets, this.bushs, this.burnBush, null, this);
                 this.physics.add.overlap( this.bullets,this.flambeauOffs,this.lightFlambeau,  null, this);
                 this.physics.add.overlap(this.player, this.bushs, this.burnBush, null, this);
                 this.physics.add.overlap(this.player, this.arbreMonstres, this.burnArbreMonstre, null, this);
                 this.physics.add.overlap(this.bullets, this.arbreMonstres, this.burnArbreMonstre, null, this);
+                
                 
                 //this.physics.add.overlap(this.keys, this.focusKey, this.stopCinematic, null, this);
 
@@ -501,6 +564,8 @@
                 repeat: -1
                 
                 });
+                
+                
 
                 //animation monstre______________________________
                 this.anims.create({
@@ -698,6 +763,9 @@
                 this.pressA=this.add.sprite(400,210,'pressA').setScrollFactor(0).setDepth(3);
                 this.focusKey=this.focus.create(this.player.body.x-20,this.player.body.y-20,'focus');
 
+                this.uiSpace=this.add.sprite(355,513,'uiSpace').setScrollFactor(0).setDepth(3).setScale(1.5);
+                this.uiE=this.add.sprite(415,513,'uiE').setScrollFactor(0).setDepth(3).setScale(1.5);
+
 
                 
 
@@ -722,6 +790,9 @@
                 this.updateEnergieBar(this.charge);
                 if(this.pv<this.maxPv&&this.charge>=6&&this.dashOn==true){this.pressA.anims.play('pressA',true)}else{this.pressA.anims.play('noPressA',true)}
 
+                if(this.fireOn==true){this.uiE.alpha = 1;}else{this.uiE.alpha = 0;}
+                if(this.dashOn==true){this.uiSpace.alpha = 1;}else{this.uiSpace.alpha = 0;}
+                
                 //recharge tir
                 if(this.chargeFire<=0 && this.charge>0 && this.fireOn==true){this.setCharge(-1);this.chargeFire=this.maxChargeFire}
                 //console.log(this.chargeFire)
@@ -1128,6 +1199,21 @@
                 this.setCharge(3);//+3 charge
 
             }
+            getDash(player,powerUp){
+                powerUp.destroy();//le powerUp disparait
+                this.dashOn=true//le dash est débloqué
+
+            }
+            getShot(player,powerUp){
+                powerUp.destroy();//le powerUp disparait
+                this.fireOn=true//le tir est débloqué
+
+            }
+            getBuffEnergie(player,powerUp){
+                powerUp.destroy();//le powerUp disparait
+                this.buffEnergie=true//le tir est débloqué
+
+            }
             hitFlambeau(player,energi3){
                 
                 this.setCharge(1);//+3 charge
@@ -1287,7 +1373,7 @@
                 default: 'arcade',
                 arcade: {
                 
-                debug: false
+                debug: true
             }},
 
 
