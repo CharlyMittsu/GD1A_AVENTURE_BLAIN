@@ -15,3 +15,7 @@ permet d'allumer les flambeau de loin
 de téléporter le personnage si une balise est touché
 d'infliger des dégât au ennemis
 consomme de l'energie si utilisé à répétition
+
+un dossier zeldalike s'est push dans le dossier zeldalike !?
+une version plus ancienne du projet en entier sauf que j'arrive pas à le supprimer je ne trouve pas comment éditer les dossier dans le repository 
+je peux juste push :/
