@@ -25,6 +25,9 @@
             { frameWidth: 32, frameHeight: 32 });
             this.load.spritesheet('arbreMonstre','assets/monstre.png',
             { frameWidth: 30 , frameHeight: 30 });
+            this.load.spritesheet('slime','assets/slime.png',
+            { frameWidth: 32 , frameHeight: 32 });
+            
             this.load.spritesheet('energie','assets/energieParticle.png',
             { frameWidth: 7 , frameHeight: 7 });
             this.load.spritesheet('energi3','assets/energi3Particle.png',
@@ -155,6 +158,10 @@
                     key: 'arbreMonstre',
                     
                 });
+                this.slimes= this.physics.add.group({
+                    key: 'slime',
+                    
+                });
                 
                 this.burningMonstres = this.physics.add.group({
                     key: 'burningMonstre',
@@ -247,9 +254,11 @@
                 carteDuNiveau.getObjectLayer('bushCalque').objects.forEach((bush)=>{
                     const bushSprite = this.bushs.create(bush.x,bush.y-bush.height,'bush').setOrigin(0);
                 });
-                
                 carteDuNiveau.getObjectLayer('monstreCalque').objects.forEach((arbreMonstre)=>{
                     const arbreMonstreSprite = this.arbreMonstres.create(arbreMonstre.x,arbreMonstre.y-arbreMonstre.height,'arbreMonstre').setOrigin(0);
+                });
+                carteDuNiveau.getObjectLayer('slimeCalque').objects.forEach((slime)=>{
+                    const slimeSprite = this.slimes.create(slime.x,slime.y-slime.height,'slime').setOrigin(0.5).setSize(28,22).setOffset(2, 10);
                 });
                 carteDuNiveau.getObjectLayer('blockEyeCalque').objects.forEach((blockEye)=>{
                     const blockEyeSprite = this.blockEyes.create(blockEye.x,blockEye.y-blockEye.height,'blockEye').setOrigin(0);
@@ -292,7 +301,7 @@
                 //_______________JOUEUR__________________
                 //_______________________________________
 
-                this.player = this.physics.add.sprite(1148, 1600, 'perso').setSize(15 ,10).setOffset(5, 20).setDepth(1);// reglage de la hitbox du perso
+                this.player = this.physics.add.sprite(1148, 1600, 'perso').setOrigin(0.5).setSize(15 ,10).setOffset(5, 20).setDepth(1);// reglage de la hitbox du perso
                 //affichage du perso entre ces calques
 
                 this.gate=this.physics.add.sprite(2526,1922,'gate').setSize(64 ,14).setOffset(0, 50).setDepth(1);
@@ -334,6 +343,7 @@
                 this.maxPv = 3;
                 this.pv = 1;
                 this.dash = false;//dash inactif si 0
+                this.pushed=false;
                 this.maxCharge = 6;//nombre max d'utilisation du dash
                 this.charge = 6; 
                 this.dashOn=false;//si le dash est débloqué
@@ -379,8 +389,10 @@
                 this.physics.add.collider( this.bullets,this.arbres, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.beacons, this.collideBullet,this.tpPlayer, null, this);
                 this.physics.add.collider( this.bullets,this.pillars, this.collideBullet, null, this);
+                this.physics.add.collider(this.bullets, this.slimes, this.collideBullet, this.killSlime,null, this);
 
                 this.physics.add.collider( this.arbreMonstres,block);
+                this.physics.add.collider( this.arbreMonstres,trou);//ne peut pas passer au dessus des trou
                 this.physics.add.collider( this.arbreMonstres,this.rochers);
                 this.physics.add.collider( this.arbreMonstres,this.locks);
                 this.physics.add.collider( this.arbreMonstres,this.arbreMonstres);
@@ -388,7 +400,7 @@
                 this.physics.add.collider( this.arbreMonstres,this.flambeauOffs);
                 this.physics.add.collider( this.arbreMonstres,this.beacons);
                 this.physics.add.collider( this.arbreMonstres,this.blockEyes,this.collideBlockEye,null,this);
-                this.physics.add.collider( this.arbreMonstres,trou);//ne peut pas passer au dessus des trou
+                
                 this.physics.add.collider(this.arbreMonstres, this.arbres);
                 
                 this.physics.add.collider(this.blockEyes, this.arbres);
@@ -396,14 +408,26 @@
                 this.physics.add.collider( this.blockEyes,this.beacons);
                 this.physics.add.collider( this.blockEyes,block);//ne peut pas passer sur les murs
                 this.physics.add.collider( this.blockEyes,trou);//ne peut pas passer au dessus des trou
+
+                this.physics.add.collider( this.slimes,block);
+                this.physics.add.collider( this.slimes,trou);
+                
+                this.physics.add.collider( this.slimes,this.rochers);
+                this.physics.add.collider( this.slimes,this.locks);
+                this.physics.add.collider( this.slimes,this.slimes);
+                this.physics.add.collider( this.slimes,this.flambeauOns);
+                this.physics.add.collider( this.slimes,this.flambeauOffs);
+                this.physics.add.collider( this.slimes,this.beacons);
+                this.physics.add.collider( this.slimes,this.blockEyes,this.collideBlockEye,null,this);
+                this.physics.add.collider(this.slimes, this.arbres);
                 
                 
                 this.physics.world.setBounds(0, 0, 4096, 4096);
                 this.cameras.main.setBounds(0, 0, 4096, 4096);
 
                 
-                //this.cameraDolly = new Phaser.Geom.Point(this.player.x, this.player.y);//crée un objet que la caméra va suivre
-                this.cameras.main.startFollow(this.player);//this.cameraDolly
+                this.knockback = new Phaser.Geom.Point(this.player.x, this.player.y);//crée un objet qui va repousser le joueur en cas de knockback
+                this.cameras.main.startFollow(this.player);
                 this.cameras.main.zoom=2;
 
                 
@@ -418,10 +442,13 @@
                 this.physics.add.overlap(this.player, this.powerUpCharge, this.getBuffEnergie, null, this);
 
                 this.physics.add.overlap(this.bullets, this.bushs, this.burnBush, null, this);
+                
                 this.physics.add.overlap( this.bullets,this.flambeauOffs,this.lightFlambeau,  null, this);
                 this.physics.add.overlap(this.player, this.bushs, this.burnBush, null, this);
                 this.physics.add.overlap(this.player, this.arbreMonstres, this.burnArbreMonstre, null, this);
                 this.physics.add.overlap(this.bullets, this.arbreMonstres, this.burnArbreMonstre, null, this);
+
+                this.physics.add.overlap( this.slimes,this.player,this.hitPlayer,null,this);
                 
                 
                 //this.physics.add.overlap(this.keys, this.focusKey, this.stopCinematic, null, this);
@@ -589,6 +616,25 @@
                 this.anims.create({
                 key: 'burningArbreMonstre',
                 frames: this.anims.generateFrameNumbers('arbreMonstre', {start:12,end:15}),
+                frameRate: 10,
+                repeat: -1
+                });
+
+                this.anims.create({
+                key: 'turnSlime',
+                frames: this.anims.generateFrameNumbers('slime', {start:8,end:9}),
+                frameRate: 2,
+                repeat: -1
+                });
+                this.anims.create({
+                key: 'rightSlime',
+                frames: this.anims.generateFrameNumbers('slime', {start:0,end:3}),
+                frameRate: 10,
+                repeat: -1
+                });
+                this.anims.create({
+                key: 'leftSlime',
+                frames: this.anims.generateFrameNumbers('slime', {start:4,end:7}),
                 frameRate: 10,
                 repeat: -1
                 });
@@ -930,15 +976,36 @@
                                     
                                     
                         }else{//si il n'y a pas de joueur autour du monstre
-                            if(arbreMonstre.body.velocity.x>0) {arbreMonstre.setVelocityX(arbreMonstre.body.velocity.x-2);}else{arbreMonstre.setVelocityX(0) }
-                            if(arbreMonstre.body.velocity.y>0) {arbreMonstre.setVelocityY(arbreMonstre.body.velocity.y-2);}else{arbreMonstre.setVelocityY(0) }
+                            if(arbreMonstre.body.velocity.x>2) {arbreMonstre.setVelocityX(arbreMonstre.body.velocity.x-2);}else if(arbreMonstre.body.velocity.x<-2){arbreMonstre.setVelocityX(arbreMonstre.body.velocity.x+2);}else{arbreMonstre.setVelocityX(0) }
+                            if(arbreMonstre.body.velocity.y>2) {arbreMonstre.setVelocityY(arbreMonstre.body.velocity.y-2);}else if(arbreMonstre.body.velocity.y<-2){arbreMonstre.setVelocityY(arbreMonstre.body.velocity.y+2);}else{arbreMonstre.setVelocityY(0) }
                             if((arbreMonstre.body.velocity.y==0)&&(arbreMonstre.body.velocity.x==0) ){arbreMonstre.anims.play('turnArbreMonstre',true);}
                         }
                     },this);
                     //console.log("monstres restant : ",this.monstresRestant);
+
+                    //_______________________________________
+                    //_____________SLIME MOVE________________
+                    //_______________________________________
+
+                    this.slimes.children.iterate(function (slime) {
+
+                        
+                        if(Phaser.Math.Distance.Between(slime.scene.player.body.x,slime.scene.player.body.y,slime.body.x,slime.body.y)<150) {
+                                
+                                this.physics.moveToObject(slime, slime.scene.player, slime.scene.speed*0.6);
+                                
+                            if(slime.body.velocity.x>0) {slime.anims.play('rightSlime',true);}else{slime.anims.play('leftSlime',true);}
+                                    
+                                    
+                        }else{
+                            if(slime.body.velocity.x>2) {slime.setVelocityX(slime.body.velocity.x-2);}else if(slime.body.velocity.x<-2){slime.setVelocityX(slime.body.velocity.x+2);}else{slime.setVelocityX(0) }
+                            if(slime.body.velocity.y>2) {slime.setVelocityY(slime.body.velocity.y-2);}else if(slime.body.velocity.y<-2){slime.setVelocityY(slime.body.velocity.y+2);}else{slime.setVelocityY(0) }
+                            if((slime.body.velocity.y==0)&&(slime.body.velocity.x==0) ){slime.anims.play('turnSlime',true);}
+                        }
+                    },this);
                     
                     //_______________________________________
-                    //__________BLOCKEYE MOVE____________
+                    //_____________BLOCKEYE MOVE_____________
                     //_______________________________________
                     
                     this.blockEyes.children.iterate(function (blockEye) {//pour chaque blockEye enfant du groupe blockEyes
@@ -990,14 +1057,14 @@
                     },this);//,this pour utiliser les this.physics dans une fonction
 
                     
-
+                    
                     
                     
                     //_______________________________________
                     //_____________DASH_______________
                     //_______________________________________
 
-                    if ((this.input.keyboard.checkDown(this.cursors.space,2000)==true)&&(this.dash==false)&&(this.charge>0)&&(this.dashOn==true) ){
+                    if ((this.input.keyboard.checkDown(this.cursors.space,2000)==true)&&(this.dash==false)&&(this.pushed==false)&&(this.charge>0)&&(this.dashOn==true) ){
                         this.dash=true;
                         this.timedEvent = this.time.delayedCall(this.tpLenght, this.stopDash, [], this);
                         this.setCharge(-1);
@@ -1039,7 +1106,7 @@
                     //_______________________________________
                     //_____________DEPLACEMENT_______________
                     //_______________________________________
-                    if(this.dash==false){
+                    if(this.dash==false&&this.pushed==false){
 
                         if (this.cursors.left.isDown){ //si la touche gauche est appuyée
                             this.facing = 1;
@@ -1103,6 +1170,15 @@
                         }
 
                     }
+                    //_______________________________________
+                    //_____________Knockback_________________
+                    //_______________________________________
+                    if(this.pushed==true){
+                        this.distKB =Phaser.Math.Distance.Between(this.player.body.x,this.player.body.y,this.knockback.x,this.knockback.y)
+                        
+                        this.physics.moveToObject(this.player, this.knockback, -700+(this.distKB*5));
+                    }
+
                 }else{//si une cinematique est en cours
                     
                     this.dash = false;
@@ -1234,13 +1310,13 @@
                     if (alea<2&&this.dashOn==true){
                         this.energies.create(bush.x, bush.y, 'energie').setOrigin(0);console.log("success");
                     
-                    }else{console.log("fail")}
+                    }//else{console.log("fail")}
                 }.bind(this), 500);
                 
                 setTimeout(function(){
                     bush.destroy()
                     
-                    console.log("buisson detruit");
+                    //console.log("buisson detruit");
                     
 
                 }.bind(this), 2000);//bind(this) permet d' identifier this.energies
@@ -1323,6 +1399,9 @@
             collideBullet(bullet){
                 bullet.destroy();
             }
+            killSlime(bullet,slime){
+                slime.destroy();
+            }
             
             lightFlambeau(player, flambeau){
                 console.log("flambeau allumé ");
@@ -1342,6 +1421,16 @@
                 
                 
             }
+            hitPlayer(player,slime){//wtf ca marche ?
+                this.cameras.main.shake(150, 0.005);
+                this.knockback.x=slime.x;
+                this.knockback.y=slime.y;
+                this.pushed=true;
+                this.push = this.time.delayedCall(300, this.stopKnockback, [], this);
+                console.log('X:',this.knockback.x,this.player.x)
+                console.log('Y:',this.knockback.y,this.player.y)
+            }
+            stopKnockback(){this.pushed=false}
             
             collideBlockEye(player,blockEye){
                 if ((player.body.y-5<blockEye.body.y)&&(player.body.y-5>blockEye.body.y-15) ){player.body.y-=32}
@@ -1384,7 +1473,7 @@
                 default: 'arcade',
                 arcade: {
                 
-                debug: false
+                debug: true
             }},
 
 
