@@ -341,12 +341,14 @@
                 this.tpLenght = 185 //distance de tp
 
                 this.maxPv = 3;
-                this.pv = 1;
+                this.pv = 3;
                 this.dash = false;//dash inactif si 0
-                this.pushed=false;
+                this.pushed=false;//en etat de knockback
+                this.immuned=false;//en état d'invincibilité
+
                 this.maxCharge = 6;//nombre max d'utilisation du dash
                 this.charge = 6; 
-                this.dashOn=false;//si le dash est débloqué
+                this.dashOn=true;//si le dash est débloqué
                 this.fireOn=false;//si le tir est débloqué
                 this.maxChargeFire = 10;
                 this.chargeFire = this.maxChargeFire;
@@ -389,7 +391,8 @@
                 this.physics.add.collider( this.bullets,this.arbres, this.collideBullet, null, this);
                 this.physics.add.collider( this.bullets,this.beacons, this.collideBullet,this.tpPlayer, null, this);
                 this.physics.add.collider( this.bullets,this.pillars, this.collideBullet, null, this);
-                this.physics.add.collider(this.bullets, this.slimes, this.collideBullet, this.killSlime,null, this);
+                this.physics.add.collider( this.bullets,this.slimes, this.killSlime, null, this);
+                
 
                 this.physics.add.collider( this.arbreMonstres,block);
                 this.physics.add.collider( this.arbreMonstres,trou);//ne peut pas passer au dessus des trou
@@ -448,7 +451,7 @@
                 this.physics.add.overlap(this.player, this.arbreMonstres, this.burnArbreMonstre, null, this);
                 this.physics.add.overlap(this.bullets, this.arbreMonstres, this.burnArbreMonstre, null, this);
 
-                this.physics.add.overlap( this.slimes,this.player,this.hitPlayer,null,this);
+                this.physics.add.overlap( this.player,this.slimes,this.hitPlayer,null,this);
                 
                 
                 //this.physics.add.overlap(this.keys, this.focusKey, this.stopCinematic, null, this);
@@ -530,6 +533,12 @@
                 key: 'tp right',
                 frames: this.anims.generateFrameNumbers('perso', {start:64,end:67}),
                 frameRate: 30,
+                
+                });
+                this.anims.create({
+                key: 'death',
+                frames: this.anims.generateFrameNumbers('perso', {start:80,end:83}),
+                frameRate: 8,
                 
                 });
 
@@ -825,6 +834,9 @@
                 var info = this.add.sprite()
                 this.focusKey.body.x = this.player.body.x-20;
                 this.focusKey.body.y = this.player.body.y-20;
+
+                if (this.immuned==true){this.player.alpha=0.6;}else{this.player.alpha=1;}
+                
                 
 
                 this.updateSpeed();
@@ -857,22 +869,22 @@
                     var Y =rocher.scene.player.body.y
                     if (rocher.body.y>Y){
                         rocher.setDepth(2)
-                        //console.log("true")
+                        
                     }
                     else if(rocher.body.y<=Y) {
                         rocher.setDepth(0)
-                        //console.log("false")
+                        
                     }
                 });
                 this.beacons.children.iterate(function (beacon) {
                     var Y =beacon.scene.player.body.y
                     if (beacon.body.y>Y){
                         beacon.setDepth(2)
-                        //console.log("true")
+                        
                     }
                     else if(beacon.body.y<=Y) {
                         beacon.setDepth(0)
-                        //console.log("false")
+                        
                     }
                 });
                 this.pillars.children.iterate(function (pillar) {
@@ -1066,7 +1078,7 @@
 
                     if ((this.input.keyboard.checkDown(this.cursors.space,2000)==true)&&(this.dash==false)&&(this.pushed==false)&&(this.charge>0)&&(this.dashOn==true) ){
                         this.dash=true;
-                        this.timedEvent = this.time.delayedCall(this.tpLenght, this.stopDash, [], this);
+                        this.timedEvent = this.time.delayedCall(this.tpLenght, this.stopDash, [], this);//je ne sais pas pourquoi mais les fonction delayedCall et TimeOut s'execute plusieur fois d'affilés
                         this.setCharge(-1);
                     };
                     if (this.dash==true){
@@ -1098,7 +1110,7 @@
 
                     if (this.input.keyboard.checkDown(this.keyA,200)==true&&this.pv!=this.maxPv&&this.charge>=6){
                         this.setCharge(-6);
-                        this.setPV(1);
+                        this.setPv(1);
                     };
                     if (this.input.keyboard.checkDown(this.keyE,200)==true&&this.fireOn==true){this.createBullet(this.player.x,this.player.y)};
                     //this.input.keyboard.checkDown(this.cursors.space,500)==true)
@@ -1184,8 +1196,9 @@
                     this.dash = false;
                     this.player.setVelocity(0);
                     this.facing=0;
-                    this.player.anims.play('turn down',true)
+                    if(this.pv>0){this.player.anims.play('turn down',true)}else{this.player.anims.play('death',true)}
                     this.arbreMonstres.children.iterate(function (arbreMonstre) {arbreMonstre.setVelocity(0)},this);
+                    this.slimes.children.iterate(function (slime) {slime.setVelocity(0)},this);
                     //this.blockEyes.children.iterate(function (blockEye) {blockEye.setVelocity(0)},this);
                     this.bullets.children.iterate(function (bullet) {bullet.destroy()},this);
                     this.energies.children.iterate(function (energie) {energie.setVelocity(0)},this);
@@ -1217,19 +1230,19 @@
             updateSpeed(){//fonction pour mettre à jour la vitesse du perso
                 this.speed = (this.speed0+0)
             }
-            setPV(value){
-                
-                this.pv += value;
-                if (this.pv>this.maxPv){this.pv=this.maxPv}
-                if (this.pv<0){this.pv=0}
-            }
+            
             updateBougie(value){
-                if(value!=0);{
+                if(value!=0){
                     
                     if (value==1){this.bougie.anims.play('1PV',true);}
                     if (value==2){this.bougie.anims.play('2PV',true);}
                     if (value==3){this.bougie.anims.play('3PV',true);}
-                };
+                }else{
+                    this.cinematic=true;
+                    this.immuned=false
+                    this.timedRespawn = this.time.delayedCall(4000, this.respawn, [], this);
+                    
+                }
 
             }
 
@@ -1308,7 +1321,7 @@
                 setTimeout(function(){
                     var alea=Phaser.Math.Between(0,150);
                     if (alea<2&&this.dashOn==true){
-                        this.energies.create(bush.x, bush.y, 'energie').setOrigin(0);console.log("success");
+                        this.energies.create(bush.x, bush.y, 'energie').setOrigin(0);
                     
                     }//else{console.log("fail")}
                 }.bind(this), 500);
@@ -1333,7 +1346,7 @@
                     monstre.destroy()
                     console.log("cadavre detruit");
                     
-                    //if (Phaser.Math.Between(0,100)<50){this.energi3s.create(monstre.x, monstre.y, 'energi3').setOrigin(0);}
+                    //
                     
 
                 }.bind(this), 2000);
@@ -1401,7 +1414,14 @@
             }
             killSlime(bullet,slime){
                 slime.destroy();
+                this.collideBullet(bullet)
+               
+                    if (Phaser.Math.Between(0,100)<50){ 
+                        var energieDrop=this.energi3s.create(slime.x, slime.y, 'energi3').setOrigin(0)
+                    }
+
             }
+            
             
             lightFlambeau(player, flambeau){
                 console.log("flambeau allumé ");
@@ -1421,17 +1441,35 @@
                 
                 
             }
-            hitPlayer(player,slime){//wtf ca marche ?
-                this.cameras.main.shake(150, 0.005);
-                this.knockback.x=slime.x;
-                this.knockback.y=slime.y;
-                this.pushed=true;
-                this.push = this.time.delayedCall(300, this.stopKnockback, [], this);
-                console.log('X:',this.knockback.x,this.player.x)
-                console.log('Y:',this.knockback.y,this.player.y)
+            hitPlayer(player,slime){
+                
+                if(this.cinematic==false&&this.dash==false){
+                    if(this.immuned==false){
+                        this.cameras.main.shake(150, 0.005);
+                        this.setPv(-1);
+                        this.immuned=true
+                        this.invicibility = this.time.delayedCall(1500, this.stopImmuned, [], this);
+                    }
+
+                    this.knockback.x=slime.x;
+                    this.knockback.y=slime.y;
+                    this.pushed=true;
+                    this.push = this.time.delayedCall(300, this.stopKnockback, [], this);
+                    
+                }
             }
+
             stopKnockback(){this.pushed=false}
-            
+            stopDash(){this.dash=false}
+            stopImmuned(){this.immuned=false}
+
+            setPv(value){
+                
+                this.pv += value;
+                if (this.pv>this.maxPv){this.pv=this.maxPv}
+                if (this.pv<0){this.pv=0}
+            }
+
             collideBlockEye(player,blockEye){
                 if ((player.body.y-5<blockEye.body.y)&&(player.body.y-5>blockEye.body.y-15) ){player.body.y-=32}
                 else if ((player.body.y>blockEye.body.y)&&(player.body.y<blockEye.body.y+32) ){player.body.y+=32}
@@ -1451,7 +1489,17 @@
                 
                 
             }
-            stopDash(){this.dash=false}
+            respawn(){
+                if(this.cinematic==true){
+                    this.player.x=800
+                    this.player.y=600
+                    this.setPv(this.maxPv)
+                    this.setCharge(-this.maxCharge)
+                    this.cinematic=false
+                    console.log("réaparition")
+                }
+            }
+            
                 
                 
                 
