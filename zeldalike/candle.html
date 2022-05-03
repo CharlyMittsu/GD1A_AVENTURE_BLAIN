@@ -276,7 +276,7 @@
                     const rocherSprite = this.flambeauOffs.create(flambeau.x,flambeau.y-flambeau.height,'flambeau').setOrigin(0);
                 })
                 carteDuNiveau.getObjectLayer('beaconCalque').objects.forEach((beacon)=>{
-                    const rocherSprite = this.beacons.create(beacon.x+16,beacon.y-32,'beacon').setOrigin(0).setSize(8 ,10).setOffset(4, 22);
+                    const rocherSprite = this.beacons.create(beacon.x+8,beacon.y-32,'beacon').setOrigin(0).setSize(8 ,10).setOffset(4, 22);
                 })
                 carteDuNiveau.getObjectLayer('pillarCalque').objects.forEach((pillar)=>{
                     const rocherSprite = this.pillars.create(pillar.x,pillar.y-32,'pillar').setOrigin(0).setSize(8 ,10).setOffset(4, 22);
@@ -301,10 +301,10 @@
                 //_______________JOUEUR__________________
                 //_______________________________________
 
-                this.player = this.physics.add.sprite(1148, 1600, 'perso').setOrigin(0.5).setSize(15 ,10).setOffset(5, 20).setDepth(1);// reglage de la hitbox du perso
+                this.player = this.physics.add.sprite(800, 600, 'perso').setOrigin(0.5).setSize(15 ,10).setOffset(5, 20).setDepth(1);// reglage de la hitbox du perso
                 //affichage du perso entre ces calques
 
-                this.gate=this.physics.add.sprite(2526,1922,'gate').setSize(64 ,14).setOffset(0, 50).setDepth(1);
+                this.gate=this.physics.add.sprite(2545,1922,'gate').setSize(64 ,14).setOffset(0, 50).setDepth(1);
                 this.gate.setImmovable(true);
 
                 //_______________________________________
@@ -333,6 +333,9 @@
                 this.keyGet=false;
                 this.porteOuverte = false;
 
+                this.spawnX=800
+                this.spawnY=600
+
                 
                 this.speed0 = 200;//vitesse de déplacement de base
                 this.speed=this.speed0
@@ -348,7 +351,7 @@
 
                 this.maxCharge = 6;//nombre max d'utilisation du dash
                 this.charge = 6; 
-                this.dashOn=true;//si le dash est débloqué
+                this.dashOn=false;//si le dash est débloqué
                 this.fireOn=false;//si le tir est débloqué
                 this.maxChargeFire = 10;
                 this.chargeFire = this.maxChargeFire;
@@ -814,7 +817,7 @@
                 
                 this.energieBar=this.add.sprite(450,228,'energieBar').setScrollFactor(0).setDepth(3);
                 //affiche un texte à l’écran, pour le score
-                this.bougie=this.add.sprite(350,220,'bougie').setScrollFactor(0).setDepth(3);
+                this.bougie=this.add.sprite(350,222,'bougie').setScrollFactor(0).setDepth(3);
                 this.pressA=this.add.sprite(400,210,'pressA').setScrollFactor(0).setDepth(3);
                 this.focusKey=this.focus.create(this.player.body.x-20,this.player.body.y-20,'focus');
 
@@ -1004,7 +1007,7 @@
                         
                         if(Phaser.Math.Distance.Between(slime.scene.player.body.x,slime.scene.player.body.y,slime.body.x,slime.body.y)<150) {
                                 
-                                this.physics.moveToObject(slime, slime.scene.player, slime.scene.speed*0.6);
+                                this.physics.moveToObject(slime, slime.scene.player, slime.scene.speed*0.5);
                                 
                             if(slime.body.velocity.x>0) {slime.anims.play('rightSlime',true);}else{slime.anims.play('leftSlime',true);}
                                     
@@ -1076,8 +1079,9 @@
                     //_____________DASH_______________
                     //_______________________________________
 
-                    if ((this.input.keyboard.checkDown(this.cursors.space,2000)==true)&&(this.dash==false)&&(this.pushed==false)&&(this.charge>0)&&(this.dashOn==true) ){
+                    if ((this.input.keyboard.checkDown(this.cursors.space,2000)==true)&&(this.dash==false)&&(this.charge>0)&&(this.dashOn==true) ){
                         this.dash=true;
+                        this.pushed=false;
                         this.timedEvent = this.time.delayedCall(this.tpLenght, this.stopDash, [], this);//je ne sais pas pourquoi mais les fonction delayedCall et TimeOut s'execute plusieur fois d'affilés
                         this.setCharge(-1);
                     };
@@ -1309,7 +1313,8 @@
 
             }
             hitFlambeau(player,energi3){
-                
+                this.spawnX=player.x;
+                this.spawnY=player.y;
                 this.setCharge(1);
 
             }
@@ -1416,7 +1421,7 @@
                 slime.destroy();
                 this.collideBullet(bullet)
                
-                    if (Phaser.Math.Between(0,100)<50){ 
+                    if (Phaser.Math.Between(0,150)<50){ 
                         var energieDrop=this.energi3s.create(slime.x, slime.y, 'energi3').setOrigin(0)
                     }
 
@@ -1491,8 +1496,8 @@
             }
             respawn(){
                 if(this.cinematic==true){
-                    this.player.x=800
-                    this.player.y=600
+                    this.player.x=this.spawnX
+                    this.player.y=this.spawnY
                     this.setPv(this.maxPv)
                     this.setCharge(-this.maxCharge)
                     this.cinematic=false
@@ -1521,7 +1526,7 @@
                 default: 'arcade',
                 arcade: {
                 
-                debug: true
+                debug: false
             }},
 
 
